@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Поиск клиентов</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --card: #fff; --text: #1d2330; --muted: #6b7385; --line: #e3e6ec;
+    --accent: #2f6fed; --accent-soft: #e8f0fe; --green: #1fa855; --green-soft: #e3f6ea;
+    --orange: #e08a00; --orange-soft: #fdf1dc; --red: #d64545; --red-soft: #fbe5e5; --gray-soft: #eef0f3;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 0 16px; }
+  header { background: var(--card); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
+  .top { display: flex; align-items: center; gap: 20px; height: 60px; }
+  .top h1 { font-size: 18px; white-space: nowrap; }
+  .tabs { display: flex; gap: 4px; overflow-x: auto; }
+  .tabs button { font: inherit; border: 0; background: none; color: var(--muted); padding: 8px 14px; border-radius: 8px; cursor: pointer; white-space: nowrap; }
+  .tabs button.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  main { padding: 28px 0 60px; }
+  .page { display: none; } .page.on { display: block; }
+  h2 { font-size: 22px; margin-bottom: 6px; }
+  h3 { font-size: 16px; margin-bottom: 10px; }
+  .sub { color: var(--muted); margin-bottom: 22px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px; margin-bottom: 18px; }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
+  input, select, textarea { width: 100%; font: inherit; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--text); }
+  textarea { resize: vertical; min-height: 150px; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+  .btn { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-weight: 600; border: 0; border-radius: 8px; padding: 9px 16px; cursor: pointer; background: var(--accent); color: #fff; text-decoration: none; }
+  .btn.green { background: var(--green); }
+  .btn.light { background: var(--gray-soft); color: var(--text); }
+  .btn.small { padding: 6px 11px; font-size: 13px; }
+  .btn:hover { filter: brightness(.95); }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+  .chip { font: inherit; font-size: 14px; border: 1px solid var(--line); background: #fff; padding: 6px 12px; border-radius: 999px; cursor: pointer; }
+  .chip.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+  .check li { margin: 6px 0 6px 20px; }
+  .note { background: var(--orange-soft); border-radius: 10px; padding: 14px 16px; font-size: 14px; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 18px; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+  .stat b { display: block; font-size: 26px; }
+  .stat span { color: var(--muted); font-size: 13px; }
+  .lead { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 10px; display: grid; grid-template-columns: 1fr auto; gap: 10px 16px; }
+  .lead .name { font-weight: 600; font-size: 16px; }
+  .lead .meta { color: var(--muted); font-size: 13px; }
+  .lead .comment { font-size: 14px; margin-top: 4px; }
+  .lead .acts { display: flex; gap: 6px; flex-wrap: wrap; align-items: start; justify-content: flex-end; }
+  .lead select { width: auto; padding: 6px 8px; font-size: 13px; }
+  .badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; margin-left: 6px; vertical-align: 2px; }
+  .s-new { background: var(--gray-soft); color: var(--muted); }
+  .s-sent { background: var(--accent-soft); color: var(--accent); }
+  .s-replied { background: var(--orange-soft); color: var(--orange); }
+  .s-client { background: var(--green-soft); color: var(--green); }
+  .s-no { background: var(--red-soft); color: var(--red); }
+  .empty { text-align: center; color: var(--muted); padding: 40px 10px; }
+  .tpl-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  table { width: 100%; border-collapse: collapse; }
+  td, th { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 13px; color: var(--muted); font-weight: 600; }
+  td.price { white-space: nowrap; font-weight: 600; }
+  td small { color: var(--muted); }
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--text); color: #fff; padding: 10px 18px; border-radius: 8px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+  @media (max-width: 640px) {
+    .top { height: auto; flex-direction: column; align-items: flex-start; gap: 6px; padding: 10px 0; }
+    .tabs { width: 100%; }
+    .lead { grid-template-columns: 1fr; }
+    .lead .acts { justify-content: flex-start; }
+    td, th { padding: 8px 4px; font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap top">
+    <h1>Поиск клиентов</h1>
+    <nav class="tabs">
+      <button data-page="search" class="on">1. Поиск</button>
+      <button data-page="leads">2. Мои клиенты <span id="leadCount"></span></button>
+      <button data-page="templates">3. Сообщения</button>
+      <button data-page="prices">4. Услуги и цены</button>
+      <button data-page="settings">Настройки</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+<!-- ПОИСК -->
+<section class="page on" id="search">
+  <h2>Найди заведения без сайта</h2>
+  <p class="sub">Выбери вид бизнеса и открой поиск в 2ГИС или Яндекс Картах. Подходящие заведения добавляй справа.</p>
+  <div class="grid2">
+    <div class="card">
+      <h3>Шаг 1. Что ищем</h3>
+      <label for="city">Город</label>
+      <input id="city" placeholder="Например, Новосибирск">
+      <label>Вид бизнеса</label>
+      <div class="chips" id="cats"></div>
+      <label for="query">Или свой запрос</label>
+      <input id="query" placeholder="Например, шиномонтаж">
+      <div class="row" style="margin-top:16px">
+        <a class="btn" id="open2gis" target="_blank" rel="noopener">Открыть в 2ГИС</a>
+        <a class="btn light" id="openYa" target="_blank" rel="noopener">Открыть в Яндекс Картах</a>
+      </div>
+      <h3 style="margin-top:24px">Что смотреть в карточке</h3>
+      <ul class="check">
+        <li><b>Нет сайта.</b> Есть только ВК, Instagram или Taplink? Это тоже подходит.</li>
+        <li><b>Есть WhatsApp</b> или мобильный номер <b>+7 9…</b>. С ним почти всегда работает WhatsApp.</li>
+        <li><b>Живой бизнес:</b> рейтинг от 4 и свежие отзывы. У таких есть деньги и желание расти.</li>
+        <li><b>Не сеть.</b> У сетевых компаний сайты делают в головном офисе.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Шаг 2. Добавь в базу</h3>
+      <form id="addForm">
+        <label for="fName">Название *</label>
+        <input id="fName" required placeholder="Кофейня «Уют»">
+        <label for="fType">Вид бизнеса</label>
+        <input id="fType" placeholder="Кофейня">
+        <label for="fPhone">WhatsApp или мобильный *</label>
+        <input id="fPhone" required inputmode="tel" placeholder="+7 913 123-45-67">
+        <label for="fSource">Где нашёл</label>
+        <select id="fSource"><option>2ГИС</option><option>Яндекс Карты</option><option>Другое</option></select>
+        <label for="fNote">Заметка</label>
+        <input id="fNote" placeholder="Например: рейтинг 4.8, есть только ВК">
+        <div class="row" style="margin-top:16px">
+          <button class="btn green" type="submit">Добавить</button>
+          <span class="sub" style="margin:0" id="dupHint"></span>
+        </div>
+      </form>
+    </div>
+  </div>
+  <div class="note"><b>Важно:</b> пиши каждому лично и вручную, не больше 15–20 сообщений в день. За массовые рассылки WhatsApp блокирует номер, а реклама без согласия получателя нарушает закон о рекламе. Личное сообщение с примером под конкретное заведение и работает лучше.</div>
+</section>
+
+<!-- МОИ КЛИЕНТЫ -->
+<section class="page" id="leads">
+  <h2>Мои клиенты</h2>
+  <p class="sub">Кнопка WhatsApp откроет чат с уже вставленным сообщением. Тебе останется проверить его и нажать «Отправить».</p>
+  <div class="stats" id="stats"></div>
+  <div class="row" style="margin-bottom:14px">
+    <select id="filter" style="width:auto">
+      <option value="all">Все</option>
+      <option value="new">Новые</option>
+      <option value="sent">Написал</option>
+      <option value="replied">Ответили</option>
+      <option value="client">Клиенты</option>
+      <option value="no">Отказ</option>
+    </select>
+    <label for="tplPick" style="margin:0">Шаблон для кнопки:</label>
+    <select id="tplPick" style="width:auto"></select>
+    <span style="flex:1"></span>
+    <button class="btn light small" id="exportBtn">Скачать базу (CSV)</button>
+    <label class="btn light small" style="margin:0;color:var(--text);font-size:13px">Загрузить CSV<input type="file" id="importFile" accept=".csv" hidden></label>
+  </div>
+  <div id="leadList"></div>
+</section>
+
+<!-- СООБЩЕНИЯ -->
+<section class="page" id="templates">
+  <h2>Тексты сообщений</h2>
+  <p class="sub">Тексты можно менять, изменения сохраняются сами. Вместо подстановок автоматически вставятся данные: <b>{название}</b>, <b>{вид}</b>, <b>{город}</b>, <b>{имя}</b>, <b>{где}</b> («в 2ГИС» или «на Яндекс Картах»), <b>{пример}</b> (ссылка на подходящий пример из портфолио).</p>
+  <div id="tplList"></div>
+  <button class="btn light small" id="resetTpl">Вернуть исходные тексты</button>
+</section>
+
+<!-- УСЛУГИ И ЦЕНЫ -->
+<section class="page" id="prices">
+  <h2>Услуги и цены</h2>
+  <p class="sub">Ориентир для начинающего в региональном городе. В Москве и Санкт-Петербурге можно ставить цены в 1,5–2 раза выше.</p>
+  <div class="card">
+    <h3>Виды сайтов</h3>
+    <table>
+      <tr><th>Сайт</th><th>Кому подходит</th><th>Цена</th><th>Срок</th></tr>
+      <tr><td><b>Сайт-визитка</b><br><small>1 страница: услуги, цены, контакты, карта</small></td><td>Мастера, небольшие сервисы, ремонт</td><td class="price">8–15 тыс. ₽</td><td>2–4 дня</td></tr>
+      <tr><td><b>Сайт-меню</b><br><small>Меню с разделами и QR-код на столы</small></td><td>Кафе, кофейни, пекарни, шаурма</td><td class="price">10–18 тыс. ₽</td><td>3–5 дней</td></tr>
+      <tr><td><b>Сайт с записью</b><br><small>Мастера, услуги, кнопка онлайн-записи (YCLIENTS, DIKIDI)</small></td><td>Барбершопы, салоны, маникюр, автосервисы</td><td class="price">15–25 тыс. ₽</td><td>5–7 дней</td></tr>
+      <tr><td><b>Многостраничный сайт</b><br><small>5–7 страниц: о компании, услуги, работы, отзывы</small></td><td>Стоматологии, строители, юристы</td><td class="price">25–45 тыс. ₽</td><td>1–2 недели</td></tr>
+      <tr><td><b>Каталог товаров</b><br><small>Товары с фото и ценами, заказ в WhatsApp</small></td><td>Цветы, торты на заказ, мебель</td><td class="price">от 30 тыс. ₽</td><td>от 2 недель</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h3>Дополнительные услуги</h3>
+    <table>
+      <tr><th>Услуга</th><th>Цена</th></tr>
+      <tr><td>Домен (адрес сайта) и подключение<br><small>Сам домен стоит ~200–600 ₽ в год, его оплачивает клиент</small></td><td class="price">1 500 ₽</td></tr>
+      <tr><td>Поддержка: правки цен и текстов, работа сайта</td><td class="price">1 000–2 000 ₽ / мес</td></tr>
+      <tr><td>Оформление карточки в 2ГИС и Яндекс Бизнесе<br><small>Фото, описание, услуги, ссылка на сайт</small></td><td class="price">2 000–3 000 ₽</td></tr>
+      <tr><td>Подключение Яндекс Метрики (статистика посещений)</td><td class="price">1 000 ₽</td></tr>
+      <tr><td>QR-коды для столов, витрины или визиток</td><td class="price">500–1 500 ₽</td></tr>
+      <tr><td>Тексты для сайта</td><td class="price">1 000–3 000 ₽</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h3>Предложение для первых клиентов</h3>
+    <ul class="check">
+      <li><b>Первым 3 клиентам скидка 50%</b> в обмен на отзыв и разрешение показывать сайт в портфолио.</li>
+      <li><b>Оплата частями:</b> 50% до начала работы, 50% когда сайт готов и понравился.</li>
+      <li><b>Бесплатный макет</b> первого экрана с названием заведения, чтобы клиент сразу увидел результат.</li>
+      <li><b>Поддержка первый месяц бесплатно.</b> Дальше по подписке, это стабильный доход.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- НАСТРОЙКИ -->
+<section class="page" id="settings">
+  <h2>Настройки</h2>
+  <p class="sub">Эти данные подставляются в сообщения.</p>
+  <div class="card" style="max-width:560px">
+    <label for="sName">Твоё имя</label>
+    <input id="sName">
+    <label for="sCity">Твой город (в нужном падеже, например «Новосибирске»)</label>
+    <input id="sCity" placeholder="Новосибирске">
+    <label for="sFood">Пример для кафе, кофеен и еды</label>
+    <input id="sFood">
+    <label for="sOther">Пример для всех остальных</label>
+    <input id="sOther">
+    <p class="sub" style="margin:14px 0 0;font-size:13px">База и настройки хранятся только в этом браузере. Время от времени скачивай базу в CSV на вкладке «Мои клиенты», чтобы её не потерять.</p>
+  </div>
+</section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ---------- Хранилище ----------
+function load(key, fallback) {
+  try { var v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; }
+}
+function save(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
+}
+
+var DEFAULT_TEMPLATES = [
+  { title: 'Первое сообщение', text:
+'Здравствуйте! Меня зовут {имя}, я делаю сайты для местного бизнеса в {город}.\n\n' +
+'Нашёл «{название}» {где}: у вас хорошие отзывы, но нет своего сайта. Из-за этого часть клиентов, которые ищут в Яндексе и Google, уходит к конкурентам.\n\n' +
+'Вот пример моей работы: {пример}\n\n' +
+'Могу сделать похожий сайт для вас за 3–5 дней: услуги и цены, кнопки «Позвонить» и «WhatsApp», адрес на карте. Сейчас набираю первых клиентов, поэтому скидка 50%.\n\n' +
+'Хотите, бесплатно покажу, как мог бы выглядеть ваш сайт?' },
+  { title: 'Если не ответили (через 2–3 дня)', text:
+'Здравствуйте! Напомню о себе: на днях писал про сайт для «{название}».\n\n' +
+'Если интересно, сделаю бесплатный макет главной страницы с вашим названием и ценами. Ни к чему не обязывает, просто посмотрите. Сделать?' },
+  { title: 'Если спросили цену', text:
+'Простой сайт для вас (услуги, цены, контакты, карта, кнопки связи) обычно стоит 15 000 ₽. Для первых клиентов делаю за 7 500 ₽.\n\n' +
+'Оплата частями: половина до начала работы, половина когда сайт готов и понравился. Первый месяц правки бесплатно.\n\n' +
+'Чтобы начать, пришлите, пожалуйста, логотип (если есть), список услуг с ценами и 3–5 фото.' },
+  { title: 'Если ответили «у нас есть ВК / Instagram»', text:
+'Соцсети — это отлично, их можно оставить! Сайт их не заменяет, а дополняет:\n\n' +
+'• его находят в Яндексе и Google люди, которые не сидят в ВК;\n' +
+'• на нём сразу видны цены и адрес, без пролистывания ленты;\n' +
+'• он выглядит солиднее, и клиенты больше доверяют.\n\n' +
+'Могу бесплатно показать, как это будет выглядеть у вас: {пример}' }
+];
+
+var settings = load('settings', {
+  name: 'Кирилл', city: '',
+  food: 'https://kirillkotsuba.github.io/zerno/',
+  other: 'https://kirillkotsuba.github.io/britva/'
+});
+var templates = load('templates', DEFAULT_TEMPLATES);
+var leads = load('leads', []);
+
+var STATUSES = { new: 'Новый', sent: 'Написал', replied: 'Ответили', client: 'Клиент', no: 'Отказ' };
+
+// ---------- Помощники ----------
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function toast(msg) { var t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(function () { t.classList.remove('show'); }, 1800); }
+
+// Приводим номер к виду 79131234567
+function normPhone(p) {
+  var d = String(p || '').replace(/\D/g, '');
+  if (d.length === 11 && d[0] === '8') d = '7' + d.slice(1);
+  if (d.length === 10) d = '7' + d;
+  return d;
+}
+function prettyPhone(d) {
+  if (d.length !== 11) return d;
+  return '+' + d[0] + ' ' + d.slice(1, 4) + ' ' + d.slice(4, 7) + '-' + d.slice(7, 9) + '-' + d.slice(9);
+}
+function exampleFor(type) {
+  return /каф|коф|ресторан|пекар|еда|столов|бар|пицц|суши|шаурм|кондитер|торт|доставк/i.test(type || '') ? settings.food : settings.other;
+}
+function fill(text, lead) {
+  return text
+    .replace(/\{название\}/g, lead.name || '')
+    .replace(/\{вид\}/g, (lead.type || '').toLowerCase())
+    .replace(/\{город\}/g, settings.city || 'вашем городе')
+    .replace(/\{имя\}/g, settings.name || '')
+    .replace(/\{где\}/g, lead.source === 'Яндекс Карты' ? 'на Яндекс Картах' : lead.source === 'Другое' ? 'в интернете' : 'в 2ГИС')
+    .replace(/\{пример\}/g, exampleFor(lead.type || lead.name));
+}
+
+// ---------- Вкладки ----------
+function showPage(id) {
+  document.querySelectorAll('.tabs button').forEach(function (b) { b.classList.toggle('on', b.dataset.page === id); });
+  document.querySelectorAll('.page').forEach(function (p) { p.classList.toggle('on', p.id === id); });
+  save('tab', id);
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll('.tabs button').forEach(function (b) {
+  b.addEventListener('click', function () { showPage(b.dataset.page); });
+});
+
+// ---------- Поиск ----------
+var CATS = ['Кафе', 'Кофейня', 'Пекарня', 'Барбершоп', 'Салон красоты', 'Маникюр', 'Автосервис', 'Шиномонтаж',
+  'Автомойка', 'Стоматология', 'Фитнес-клуб', 'Цветы', 'Ремонт телефонов', 'Химчистка', 'Ветклиника', 'Детский центр'];
+var cityInput = document.getElementById('city');
+var queryInput = document.getElementById('query');
+cityInput.value = load('searchCity', '');
+
+function renderCats() {
+  var box = document.getElementById('cats');
+  box.innerHTML = CATS.map(function (c) {
+    return '<button type="button" class="chip' + (queryInput.value === c ? ' on' : '') + '">' + esc(c) + '</button>';
+  }).join('');
+  box.querySelectorAll('.chip').forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      queryInput.value = chip.textContent;
+      document.getElementById('fType').value = chip.textContent;
+      renderCats(); updateLinks();
+    });
+  });
+}
+function updateLinks() {
+  var q = (queryInput.value + ' ' + cityInput.value).trim();
+  document.getElementById('open2gis').href = 'https://2gis.ru/search/' + encodeURIComponent(q);
+  document.getElementById('openYa').href = 'https://yandex.ru/maps/?text=' + encodeURIComponent(q);
+}
+cityInput.addEventListener('input', function () { save('searchCity', cityInput.value); updateLinks(); });
+queryInput.addEventListener('input', function () { renderCats(); updateLinks(); });
+renderCats(); updateLinks();
+
+// ---------- Добавление ----------
+var phoneInput = document.getElementById('fPhone');
+phoneInput.addEventListener('input', function () {
+  var d = normPhone(phoneInput.value);
+  var dup = leads.find(function (l) { return l.phone === d; });
+  var hint = '';
+  if (dup) hint = 'Уже есть в базе: ' + dup.name;
+  else if (d.length === 11 && d[1] !== '9') hint = 'Похоже на городской номер, WhatsApp там вряд ли есть';
+  document.getElementById('dupHint').textContent = hint;
+});
+document.getElementById('addForm').addEventListener('submit', function (e) {
+  e.preventDefault();
+  var phone = normPhone(phoneInput.value);
+  if (phone.length !== 11) { toast('Проверь номер телефона'); return; }
+  if (leads.some(function (l) { return l.phone === phone; })) { toast('Этот номер уже в базе'); return; }
+  leads.unshift({
+    id: Date.now(),
+    name: document.getElementById('fName').value.trim(),
+    type: document.getElementById('fType').value.trim(),
+    phone: phone,
+    source: document.getElementById('fSource').value,
+    note: document.getElementById('fNote').value.trim(),
+    status: 'new',
+    added: new Date().toISOString().slice(0, 10)
+  });
+  save('leads', leads);
+  ['fName', 'fPhone', 'fNote'].forEach(function (id) { document.getElementById(id).value = ''; });
+  document.getElementById('dupHint').textContent = '';
+  renderLeads();
+  toast('Добавлено');
+  document.getElementById('fName').focus();
+});
+
+// ---------- Список клиентов ----------
+function renderTplPick() {
+  var pick = document.getElementById('tplPick');
+  var cur = pick.value || '0';
+  pick.innerHTML = templates.map(function (t, i) { return '<option value="' + i + '">' + esc(t.title) + '</option>'; }).join('');
+  pick.value = templates[cur] ? cur : '0';
+}
+function renderLeads() {
+  document.getElementById('leadCount').textContent = leads.length ? '(' + leads.length + ')' : '';
+  var counts = { new: 0, sent: 0, replied: 0, client: 0, no: 0 };
+  leads.forEach(function (l) { counts[l.status] = (counts[l.status] || 0) + 1; });
+  document.getElementById('stats').innerHTML =
+    '<div class="stat"><b>' + leads.length + '</b><span>всего в базе</span></div>' +
+    '<div class="stat"><b>' + counts.new + '</b><span>ещё не писал</span></div>' +
+    '<div class="stat"><b>' + (counts.sent + counts.replied + counts.client + counts.no) + '</b><span>написал</span></div>' +
+    '<div class="stat"><b>' + (counts.replied + counts.client) + '</b><span>ответили</span></div>' +
+    '<div class="stat"><b>' + counts.client + '</b><span>клиентов</span></div>';
+
+  var f = document.getElementById('filter').value;
+  var list = leads.filter(function (l) { return f === 'all' || l.status === f; });
+  var box = document.getElementById('leadList');
+  if (!list.length) {
+    box.innerHTML = '<div class="empty">' + (leads.length ? 'Здесь пока никого.' : 'База пустая. Найди заведения на вкладке «1. Поиск» и добавь их.') + '</div>';
+    return;
+  }
+  var tpl = templates[document.getElementById('tplPick').value] || templates[0];
+  box.innerHTML = list.map(function (l) {
+    var msg = tpl ? fill(tpl.text, l) : '';
+    var wa = 'https://wa.me/' + l.phone + '?text=' + encodeURIComponent(msg);
+    var tg = 'https://t.me/+' + l.phone;
+    var opts = Object.keys(STATUSES).map(function (k) {
+      return '<option value="' + k + '"' + (l.status === k ? ' selected' : '') + '>' + STATUSES[k] + '</option>';
+    }).join('');
+    return '<div class="lead" data-id="' + l.id + '">' +
+      '<div><div class="name">' + esc(l.name) + '<span class="badge s-' + l.status + '">' + STATUSES[l.status] + '</span></div>' +
+      '<div class="meta">' + esc([l.type, prettyPhone(l.phone), l.source, 'добавлен ' + l.added].filter(Boolean).join(' · ')) + '</div>' +
+      (l.note ? '<div class="comment">' + esc(l.note) + '</div>' : '') + '</div>' +
+      '<div class="acts">' +
+        '<a class="btn green small" data-act="wa" href="' + esc(wa) + '" target="_blank" rel="noopener">WhatsApp</a>' +
+        '<a class="btn light small" href="' + esc(tg) + '" target="_blank" rel="noopener">Telegram</a>' +
+        '<button class="btn light small" data-act="copy">Копировать текст</button>' +
+        '<select data-act="status">' + opts + '</select>' +
+        '<button class="btn light small" data-act="note" title="Изменить заметку">✎</button>' +
+        '<button class="btn light small" data-act="del" title="Удалить">✕</button>' +
+      '</div></div>';
+  }).join('');
+}
+function findLead(el) { var id = Number(el.closest('.lead').dataset.id); return leads.find(function (l) { return l.id === id; }); }
+document.getElementById('leadList').addEventListener('click', function (e) {
+  var el = e.target.closest('[data-act]'); if (!el) return;
+  var lead = findLead(el); if (!lead) return;
+  var act = el.dataset.act;
+  if (act === 'wa') {
+    if (lead.status === 'new') { lead.status = 'sent'; save('leads', leads); setTimeout(renderLeads, 300); }
+  } else if (act === 'copy') {
+    var tpl = templates[document.getElementById('tplPick').value] || templates[0];
+    var text = fill(tpl.text, lead);
+    (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(function () { toast('Текст скопирован'); }, function () { prompt('Скопируй текст:', text); });
+  } else if (act === 'note') {
+    var n = prompt('Заметка для «' + lead.name + '»', lead.note || '');
+    if (n !== null) { lead.note = n.trim(); save('leads', leads); renderLeads(); }
+  } else if (act === 'del') {
+    if (confirm('Удалить «' + lead.name + '» из базы?')) { leads = leads.filter(function (l) { return l !== lead; }); save('leads', leads); renderLeads(); }
+  }
+});
+document.getElementById('leadList').addEventListener('change', function (e) {
+  if (e.target.dataset.act !== 'status') return;
+  var lead = findLead(e.target); lead.status = e.target.value; save('leads', leads); renderLeads();
+});
+document.getElementById('filter').addEventListener('change', renderLeads);
+document.getElementById('tplPick').addEventListener('change', renderLeads);
+
+// ---------- CSV ----------
+var CSV_COLS = ['name', 'type', 'phone', 'source', 'status', 'note', 'added'];
+var CSV_HEAD = ['Название', 'Вид', 'Телефон', 'Источник', 'Статус', 'Заметка', 'Добавлен'];
+function csvCell(v) { v = String(v == null ? '' : v); return /[;"\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+document.getElementById('exportBtn').addEventListener('click', function () {
+  var rows = [CSV_HEAD.join(';')].concat(leads.map(function (l) {
+    return CSV_COLS.map(function (c) { return csvCell(c === 'status' ? STATUSES[l.status] : l[c]); }).join(';');
+  }));
+  var blob = new Blob(['﻿' + rows.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'klienty-' + new Date().toISOString().slice(0, 10) + '.csv';
+  a.click();
+});
+function parseCsv(text) {
+  var rows = [], row = [], cell = '', q = false;
+  for (var i = 0; i < text.length; i++) {
+    var c = text[i];
+    if (q) { if (c === '"' && text[i + 1] === '"') { cell += '"'; i++; } else if (c === '"') q = false; else cell += c; }
+    else if (c === '"') q = true;
+    else if (c === ';') { row.push(cell); cell = ''; }
+    else if (c === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
+    else if (c !== '\r') cell += c;
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  return rows;
+}
+document.getElementById('importFile').addEventListener('change', function (e) {
+  var file = e.target.files[0]; if (!file) return;
+  file.text().then(function (text) {
+    var rows = parseCsv(text.replace(/^﻿/, '')).slice(1);
+    var byName = {}; Object.keys(STATUSES).forEach(function (k) { byName[STATUSES[k]] = k; });
+    var added = 0;
+    rows.forEach(function (r, i) {
+      var phone = normPhone(r[2]);
+      if (!r[0] || phone.length !== 11 || leads.some(function (l) { return l.phone === phone; })) return;
+      leads.push({ id: Date.now() + i, name: r[0], type: r[1] || '', phone: phone, source: r[3] || '', status: byName[r[4]] || 'new', note: r[5] || '', added: r[6] || new Date().toISOString().slice(0, 10) });
+      added++;
+    });
+    save('leads', leads); renderLeads(); toast('Добавлено: ' + added);
+    e.target.value = '';
+  });
+});
+
+// ---------- Шаблоны ----------
+function renderTemplates() {
+  document.getElementById('tplList').innerHTML = templates.map(function (t, i) {
+    return '<div class="card"><div class="tpl-head"><h3 style="margin:0">' + esc(t.title) + '</h3>' +
+      '<button class="btn light small" data-copy="' + i + '">Копировать</button></div>' +
+      '<textarea data-tpl="' + i + '" style="margin-top:10px;min-height:' + (t.text.split('\n').length * 24 + 40) + 'px">' + esc(t.text) + '</textarea></div>';
+  }).join('');
+}
+document.getElementById('tplList').addEventListener('input', function (e) {
+  var i = e.target.dataset.tpl; if (i == null) return;
+  templates[i].text = e.target.value; save('templates', templates);
+});
+document.getElementById('tplList').addEventListener('click', function (e) {
+  var i = e.target.dataset.copy; if (i == null) return;
+  var text = fill(templates[i].text, { name: 'Название заведения', type: '' });
+  (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(function () { toast('Текст скопирован'); }, function () { prompt('Скопируй текст:', text); });
+});
+document.getElementById('resetTpl').addEventListener('click', function () {
+  if (!confirm('Вернуть исходные тексты? Твои правки пропадут.')) return;
+  templates = JSON.parse(JSON.stringify(DEFAULT_TEMPLATES)); save('templates', templates);
+  renderTemplates(); renderTplPick(); renderLeads();
+});
+
+// ---------- Настройки ----------
+[['sName', 'name'], ['sCity', 'city'], ['sFood', 'food'], ['sOther', 'other']].forEach(function (pair) {
+  var el = document.getElementById(pair[0]);
+  el.value = settings[pair[1]] || '';
+  el.addEventListener('input', function () { settings[pair[1]] = el.value.trim(); save('settings', settings); renderLeads(); });
+});
+
+renderTemplates(); renderTplPick(); renderLeads();
+showPage(load('tab', 'search'));
+</script>
+</body>
+</html>
