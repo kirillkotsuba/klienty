@@ -81,10 +81,11 @@
   <div class="wrap top">
     <h1>Поиск клиентов</h1>
     <nav class="tabs">
-      <button data-page="search" class="on">1. Поиск</button>
-      <button data-page="leads">2. Мои клиенты <span id="leadCount"></span></button>
-      <button data-page="templates">3. Сообщения</button>
-      <button data-page="prices">4. Услуги и цены</button>
+      <button data-page="auto" class="on">Автопоиск</button>
+      <button data-page="leads">Мои клиенты <span id="leadCount"></span></button>
+      <button data-page="templates">Сообщения</button>
+      <button data-page="prices">Услуги и цены</button>
+      <button data-page="search">Ручной поиск</button>
       <button data-page="settings">Настройки</button>
     </nav>
   </div>
@@ -92,8 +93,33 @@
 
 <main class="wrap">
 
+<!-- АВТОПОИСК -->
+<section class="page on" id="auto">
+  <h2>Автопоиск заведений без сайта</h2>
+  <p class="sub">Выбери город и вид бизнеса, и инструмент сам найдёт заведения, у которых не указан сайт. Сверху списка будут те, у кого есть мобильный номер (значит, скорее всего, есть WhatsApp). Данные берутся из открытой карты OpenStreetMap: это бесплатно и законно.</p>
+  <div class="card">
+    <div class="grid2" style="gap:0 18px">
+      <div><label for="aCity">Город</label><input id="aCity" placeholder="Например, Томск"></div>
+      <div><label for="aCat">Вид бизнеса</label><select id="aCat"></select></div>
+    </div>
+    <div class="row" style="margin-top:16px">
+      <button class="btn" id="aGo">Найти</button>
+      <span id="aStatus" style="color:var(--muted)"></span>
+    </div>
+  </div>
+  <div id="aSummary"></div>
+  <div class="row" id="aTools" style="margin-bottom:14px" hidden>
+    <div class="chips" id="aFilter" style="margin:0"></div>
+    <span style="flex:1"></span>
+    <button class="btn green small" id="aAddAll">Добавить всех с мобильным в базу</button>
+  </div>
+  <div id="aList"></div>
+  <div class="note" style="margin-top:18px"><b>Совет:</b> карта не всегда знает про все сайты и телефоны. Перед тем как писать, нажми «Проверить в 2ГИС»: за пару секунд увидишь, точно ли у заведения нет сайта, а если в списке нет номера, возьмёшь его оттуда.</div>
+  <p style="color:var(--muted);font-size:12px;margin-top:14px">Данные © участники <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" style="color:inherit">OpenStreetMap</a>, лицензия ODbL.</p>
+</section>
+
 <!-- ПОИСК -->
-<section class="page on" id="search">
+<section class="page" id="search">
   <h2>Найди заведения без сайта</h2>
   <p class="sub">Выбери вид бизнеса и открой поиск в 2ГИС или Яндекс Картах. Подходящие заведения добавляй справа.</p>
   <div class="grid2">
@@ -242,7 +268,7 @@ function save(key, value) {
 var DEFAULT_TEMPLATES = [
   { title: 'Первое сообщение', text:
 'Здравствуйте! Меня зовут {имя}, я делаю сайты для местного бизнеса в {город}.\n\n' +
-'Нашёл «{название}» {где}: у вас хорошие отзывы, но нет своего сайта. Из-за этого часть клиентов, которые ищут в Яндексе и Google, уходит к конкурентам.\n\n' +
+'Нашёл «{название}» {где} и увидел, что у вас нет своего сайта. Из-за этого часть клиентов, которые ищут в Яндексе и Google, уходит к конкурентам.\n\n' +
 'Вот пример моей работы: {пример}\n\n' +
 'Могу сделать похожий сайт для вас за 3–5 дней: услуги и цены, кнопки «Позвонить» и «WhatsApp», адрес на карте. Сейчас набираю первых клиентов, поэтому скидка 50%.\n\n' +
 'Хотите, бесплатно покажу, как мог бы выглядеть ваш сайт?' },
@@ -295,7 +321,7 @@ function fill(text, lead) {
     .replace(/\{вид\}/g, (lead.type || '').toLowerCase())
     .replace(/\{город\}/g, settings.city || 'вашем городе')
     .replace(/\{имя\}/g, settings.name || '')
-    .replace(/\{где\}/g, lead.source === 'Яндекс Карты' ? 'на Яндекс Картах' : lead.source === 'Другое' ? 'в интернете' : 'в 2ГИС')
+    .replace(/\{где\}/g, { '2ГИС': 'в 2ГИС', 'Яндекс Карты': 'на Яндекс Картах', 'Другое': 'в интернете' }[lead.source] || 'на карте')
     .replace(/\{пример\}/g, exampleFor(lead.type || lead.name));
 }
 
@@ -394,7 +420,7 @@ function renderLeads() {
   var list = leads.filter(function (l) { return f === 'all' || l.status === f; });
   var box = document.getElementById('leadList');
   if (!list.length) {
-    box.innerHTML = '<div class="empty">' + (leads.length ? 'Здесь пока никого.' : 'База пустая. Найди заведения на вкладке «1. Поиск» и добавь их.') + '</div>';
+    box.innerHTML = '<div class="empty">' + (leads.length ? 'Здесь пока никого.' : 'База пустая. Найди заведения на вкладке «Автопоиск» и добавь их.') + '</div>';
     return;
   }
   var tpl = templates[document.getElementById('tplPick').value] || templates[0];
@@ -518,8 +544,226 @@ document.getElementById('resetTpl').addEventListener('click', function () {
   el.addEventListener('input', function () { settings[pair[1]] = el.value.trim(); save('settings', settings); renderLeads(); });
 });
 
+// ---------- Автопоиск (OpenStreetMap) ----------
+var OSM_CATS = [
+  ['Кафе', [['amenity', 'cafe']]],
+  ['Ресторан', [['amenity', 'restaurant']]],
+  ['Фастфуд, шаурма, пицца', [['amenity', 'fast_food']]],
+  ['Пекарня, кондитерская', [['shop', 'bakery'], ['shop', 'confectionery'], ['shop', 'pastry']]],
+  ['Парикмахерская, барбершоп', [['shop', 'hairdresser']]],
+  ['Салон красоты, маникюр', [['shop', 'beauty']]],
+  ['Массаж', [['shop', 'massage']]],
+  ['Тату-салон', [['shop', 'tattoo']]],
+  ['Автосервис', [['shop', 'car_repair']]],
+  ['Шиномонтаж', [['shop', 'tyres']]],
+  ['Автомойка', [['amenity', 'car_wash']]],
+  ['Стоматология', [['amenity', 'dentist']]],
+  ['Ветклиника', [['amenity', 'veterinary']]],
+  ['Фитнес-клуб', [['leisure', 'fitness_centre']]],
+  ['Цветы', [['shop', 'florist']]],
+  ['Ремонт телефонов', [['shop', 'mobile_phone'], ['craft', 'electronics_repair']]],
+  ['Химчистка, прачечная', [['shop', 'dry_cleaning'], ['shop', 'laundry']]],
+  ['Зоомагазин', [['shop', 'pet']]],
+  ['Мебель', [['shop', 'furniture']]],
+  ['Одежда', [['shop', 'clothes']]]
+];
+var OVERPASS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter'
+];
+var aCity = document.getElementById('aCity');
+var aCat = document.getElementById('aCat');
+aCat.innerHTML = OSM_CATS.map(function (c, i) { return '<option value="' + i + '">' + esc(c[0]) + '</option>'; }).join('');
+aCity.value = load('autoCity', load('searchCity', ''));
+aCat.value = load('autoCat', '0');
+aCity.addEventListener('input', function () { save('autoCity', aCity.value); });
+aCat.addEventListener('change', function () { save('autoCat', aCat.value); });
+
+var found = [], foundStats = null, aFilterMode = 'mobile', foundCat = '';
+
+function setStatus(t) { document.getElementById('aStatus').textContent = t; }
+
+// Ищем город и получаем номер его области в OpenStreetMap
+function getArea(city) {
+  var cache = load('areas', {});
+  var key = city.toLowerCase();
+  if (cache[key]) return Promise.resolve(cache[key]);
+  var base = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&countrycodes=ru&accept-language=ru&';
+  function pick(list) { return (list || []).find(function (r) { return r.osm_type === 'relation'; }); }
+  return fetch(base + 'city=' + encodeURIComponent(city)).then(function (r) { return r.json(); })
+    .then(function (list) {
+      return pick(list) || fetch(base + 'q=' + encodeURIComponent(city)).then(function (r) { return r.json(); }).then(pick);
+    })
+    .then(function (hit) {
+      if (!hit) throw new Error('Город «' + city + '» не найден. Проверь название.');
+      var area = { id: 3600000000 + Number(hit.osm_id), name: hit.display_name.split(',').slice(0, 2).join(',') };
+      cache[key] = area; save('areas', cache);
+      return area;
+    });
+}
+
+function overpass(query, i) {
+  i = i || 0;
+  return fetch(OVERPASS[i], {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: 'data=' + encodeURIComponent(query)
+  }).then(function (r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }).catch(function (err) {
+    if (i + 1 < OVERPASS.length) return overpass(query, i + 1);
+    throw new Error('Сервер карты не отвечает. Попробуй ещё раз через минуту.');
+  });
+}
+
+function analyze(el) {
+  var t = el.tags || {};
+  if (!t.name) return null;
+  if (t.brand || t['brand:wikidata']) return { chain: true };
+  var site = t.website || t['contact:website'] || t.url || '';
+  var social = false;
+  if (site && /vk\.(com|ru)|instagram|taplink|t\.me|ok\.ru|2gis|yandex|wa\.me|whatsapp/i.test(site)) { site = ''; social = true; }
+  if (site) return { site: true };
+  if (t['contact:vk'] || t['contact:instagram'] || t['contact:telegram'] || t['contact:ok']) social = true;
+  var raw = [t['contact:whatsapp'], t['contact:mobile'], t.mobile, t.phone, t['contact:phone']].filter(Boolean).join(';');
+  var phones = raw.split(/[;,]/).map(normPhone).filter(function (d, i, arr) { return d.length === 11 && d[0] === '7' && arr.indexOf(d) === i; });
+  var mobile = phones.find(function (d) { return d[1] === '9'; });
+  return {
+    osm: el.type + '/' + el.id,
+    name: t.name,
+    addr: [t['addr:street'], t['addr:housenumber']].filter(Boolean).join(', '),
+    phone: mobile || phones[0] || '',
+    mobile: !!mobile,
+    wa: !!t['contact:whatsapp'],
+    social: social
+  };
+}
+
+document.getElementById('aGo').addEventListener('click', function () {
+  var city = aCity.value.trim();
+  if (!city) { toast('Впиши город'); aCity.focus(); return; }
+  var cat = OSM_CATS[aCat.value];
+  var btn = this; btn.disabled = true;
+  document.getElementById('aList').innerHTML = '';
+  document.getElementById('aSummary').innerHTML = '';
+  document.getElementById('aTools').hidden = true;
+  setStatus('Ищу город…');
+  getArea(city).then(function (area) {
+    setStatus('Ищу заведения в ' + area.name + '… это может занять до 30 секунд');
+    var q = '[out:json][timeout:90];area(id:' + area.id + ')->.a;(' +
+      cat[1].map(function (s) { return 'nwr["' + s[0] + '"="' + s[1] + '"](area.a);'; }).join('') +
+      ');out center tags;';
+    return overpass(q);
+  }).then(function (data) {
+    var seen = {}, all = 0, chains = 0, withSite = 0;
+    found = [];
+    (data.elements || []).forEach(function (el) {
+      var r = analyze(el); if (!r) return;
+      all++;
+      if (r.chain) { chains++; return; }
+      if (r.site) { withSite++; return; }
+      var k = (r.name + '|' + r.addr).toLowerCase();
+      if (seen[k]) return; seen[k] = 1;
+      found.push(r);
+    });
+    found.sort(function (a, b) {
+      return (b.mobile - a.mobile) || (!!b.phone - !!a.phone) || a.name.localeCompare(b.name, 'ru');
+    });
+    foundCat = cat[0];
+    foundStats = {
+      all: all, chains: chains, withSite: withSite, nosite: found.length,
+      phone: found.filter(function (f) { return f.phone; }).length,
+      mobile: found.filter(function (f) { return f.mobile; }).length
+    };
+    aFilterMode = foundStats.mobile ? 'mobile' : foundStats.phone ? 'phone' : 'all';
+    setStatus('');
+    renderFound();
+  }).catch(function (err) {
+    setStatus('');
+    document.getElementById('aSummary').innerHTML = '<div class="note" style="background:var(--red-soft)">' + esc(err.message) + '</div>';
+  }).then(function () { btn.disabled = false; });
+});
+
+function inBase(f) { return leads.some(function (l) { return l.osm === f.osm || (f.phone && l.phone === f.phone); }); }
+
+function renderFound() {
+  var s = foundStats; if (!s) return;
+  document.getElementById('aSummary').innerHTML = '<div class="stats">' +
+    '<div class="stat"><b>' + s.all + '</b><span>всего найдено</span></div>' +
+    '<div class="stat"><b>' + s.nosite + '</b><span>без сайта</span></div>' +
+    '<div class="stat"><b>' + s.phone + '</b><span>с телефоном</span></div>' +
+    '<div class="stat"><b>' + s.mobile + '</b><span>с мобильным (WhatsApp)</span></div>' +
+    '<div class="stat"><b>' + (s.withSite + s.chains) + '</b><span>отсеяно: есть сайт или это сеть</span></div></div>';
+  if (!s.nosite) {
+    document.getElementById('aList').innerHTML = '<div class="empty">Заведений без сайта не нашлось. Попробуй другой вид бизнеса.</div>';
+    return;
+  }
+  var modes = [['mobile', 'С мобильным (' + s.mobile + ')'], ['phone', 'С любым телефоном (' + s.phone + ')'], ['all', 'Все без сайта (' + s.nosite + ')']];
+  var fBox = document.getElementById('aFilter');
+  fBox.innerHTML = modes.map(function (m) { return '<button type="button" class="chip' + (aFilterMode === m[0] ? ' on' : '') + '" data-f="' + m[0] + '">' + m[1] + '</button>'; }).join('');
+  document.getElementById('aTools').hidden = false;
+  var toAdd = found.filter(function (f) { return f.mobile && !inBase(f); }).length;
+  var addAll = document.getElementById('aAddAll');
+  addAll.textContent = 'Добавить всех с мобильным в базу (' + toAdd + ')';
+  addAll.disabled = !toAdd; addAll.style.opacity = toAdd ? 1 : .5;
+
+  var list = found.filter(function (f) { return aFilterMode === 'all' || (aFilterMode === 'phone' ? f.phone : f.mobile); });
+  var city = aCity.value.trim();
+  document.getElementById('aList').innerHTML = list.length ? list.map(function (f, i) {
+    var badges = '';
+    if (f.wa) badges += '<span class="badge s-client">WhatsApp</span>';
+    else if (f.mobile) badges += '<span class="badge s-client">мобильный</span>';
+    else if (f.phone) badges += '<span class="badge s-new">городской</span>';
+    else badges += '<span class="badge s-replied">нет телефона</span>';
+    if (f.social) badges += '<span class="badge s-sent">есть соцсети</span>';
+    var q = encodeURIComponent([f.name, f.addr, city].filter(Boolean).join(' '));
+    var add = inBase(f)
+      ? '<button class="btn light small" disabled>В базе ✓</button>'
+      : '<button class="btn green small" data-add="' + found.indexOf(f) + '">' + (f.phone ? 'В базу' : 'Добавить с телефоном') + '</button>';
+    return '<div class="lead"><div><div class="name">' + esc(f.name) + badges + '</div>' +
+      '<div class="meta">' + esc([foundCat, f.addr, f.phone ? prettyPhone(f.phone) : ''].filter(Boolean).join(' · ')) + '</div></div>' +
+      '<div class="acts">' + add +
+      '<a class="btn light small" href="https://2gis.ru/search/' + q + '" target="_blank" rel="noopener">Проверить в 2ГИС</a>' +
+      '<a class="btn light small" href="https://yandex.ru/maps/?text=' + q + '" target="_blank" rel="noopener">Яндекс</a>' +
+      '</div></div>';
+  }).join('') : '<div class="empty">В этом фильтре пусто. Выбери «Все без сайта».</div>';
+}
+
+function addFound(f, phone) {
+  leads.unshift({
+    id: Date.now() + Math.floor(Math.random() * 1000),
+    name: f.name, type: foundCat, phone: phone, source: 'Карты',
+    note: [f.addr, f.social ? 'есть соцсети' : ''].filter(Boolean).join(' · '),
+    status: 'new', added: new Date().toISOString().slice(0, 10), osm: f.osm
+  });
+}
+document.getElementById('aFilter').addEventListener('click', function (e) {
+  var f = e.target.dataset.f; if (!f) return;
+  aFilterMode = f; renderFound();
+});
+document.getElementById('aList').addEventListener('click', function (e) {
+  var i = e.target.dataset.add; if (i == null) return;
+  var f = found[i], phone = f.phone;
+  if (!phone) {
+    var p = prompt('Телефон для «' + f.name + '» (возьми его в 2ГИС или Яндекс Картах):', '');
+    if (p === null) return;
+    phone = normPhone(p);
+    if (phone.length !== 11) { toast('Проверь номер телефона'); return; }
+    if (leads.some(function (l) { return l.phone === phone; })) { toast('Этот номер уже в базе'); return; }
+  }
+  addFound(f, phone); save('leads', leads); renderLeads(); renderFound(); toast('Добавлено в «Мои клиенты»');
+});
+document.getElementById('aAddAll').addEventListener('click', function () {
+  var list = found.filter(function (f) { return f.mobile && !inBase(f); });
+  if (!list.length || !confirm('Добавить в базу ' + list.length + ' заведений с мобильным номером?')) return;
+  list.forEach(function (f) { addFound(f, f.phone); });
+  save('leads', leads); renderLeads(); renderFound(); toast('Добавлено: ' + list.length);
+});
+
 renderTemplates(); renderTplPick(); renderLeads();
-showPage(load('tab', 'search'));
+showPage(load('tab', 'auto'));
 </script>
 </body>
 </html>
